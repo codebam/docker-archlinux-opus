@@ -1,0 +1,3 @@
+#!/bin/bash
+
+screen /usr/bin/opus-convert-dir /music $BITRATE /transcodes $OVERWRITE

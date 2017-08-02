@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# example usage
+# ./opus-docker /home/foo/music 128 /home/foo/opus
+# ./opus-docker /home/bar/music 160 /home/bar/opus -y
+
+# build image
+docker build -t archlinux-opus .
+
+# run image
+docker run -t -v $1:/music -e BITRATE=$2 -v $3:/transcodes -e OVERWRITE=$4 archlinux-opus

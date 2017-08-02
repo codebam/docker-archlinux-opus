@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# specify bitrate here
+export source=$1
+export bitrate=$2
+export destination=$3
+if [ -z "${4+x}" ]; then export overwrite="-n"; else export overwrite="$4"; fi # to overwrite files set your 4th arg to -y or -n
+
+# if your scripts aren't in your $PATH, but are installed, you can specify locations here
+export reqs=("opusenc")
+
+
+# don't touch anything below this line ----------------------------
+
+
+function check {
+    printf "Checking %s: " "$1";
+
+    if hash "$1" 2>/dev/null; then # check if command exists
+        printf "OK!\n";
+    else
+        printf "Failed.\n";
+        echo "$1 is required to run this script, please install it.";
+        exit 1;
+    fi
+}
+
+
+function tests {
+    for program in "${reqs[@]}"
+    do
+        check "$program";
+    done
+}
+
+
+function help_ {
+    echo "Usage: $0 [source] [bitrate] [dest]"
+    echo "Example: $0 music 128 transcodes"
+}
+
+
+function convert_opus {
+    file=$1
+    bitrate=$2
+    to_folder=$3
+
+    dest="$to_folder/${file%.flac}.opus"
+    directory="$to_folder/${file%/*}"
+
+    mkdir -p "$directory"
+
+    echo "$dest"
+    if [ -s "$dest" ]; then
+        if [ "$overwrite" == "-y" ]; then # if the user wants us to overwrite
+            opusenc --bitrate "$bitrate" "$file" "$dest"
+        elif [ "$(file "$dest" | rev | cut -f2 -d' ' | rev)" != "Opus" ] ; then # if it's not an opus file
+            opusenc --bitrate "$bitrate" "$file" "$dest"
+        else
+            echo "$dest exists and is valid."
+        fi
+    else
+        opusenc --bitrate "$bitrate" "$file" "$dest"
+    fi
+
+    #opusenc --bitrate "$bitrate" "$file" "$dest"
+    #ffmpeg -i "$file" -acodec libopus -vn -b:a "$bitrate"k -vbr on "$dest" "$overwrite"
+}
+export -f convert_opus # exported so I can use it inside find -exec
+
+
+function copy_album_art {
+    file=$1
+    to_folder=$2
+    dest="$to_folder/$file"
+    cp -u "$file" "$dest" # -u means it'll update, and not copy if the file already exists
+}
+export -f copy_album_art
+
+
+function main {
+    if [ $# -eq 0 ]
+    then
+        echo "No arguments supplied"
+        help_ "$@";
+        exit 1;
+    fi
+
+    tests;
+    find "$source" -name "*.flac" -exec bash -c 'convert_opus "$1" "$bitrate" "$destination"' _ {} \; # do transcodes
+    find "$source" -type f \( -iname \*.jpg -o -iname \*.png  -o -iname \*.jpeg \) -exec bash -c 'copy_album_art "$1" "$destination"' _ {} \; # copy album art
+}
+
+main "$@"
