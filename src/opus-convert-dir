@@ -7,7 +7,7 @@ export destination=$3
 if [ -z "${4+x}" ]; then export overwrite="-n"; else export overwrite="$4"; fi # to overwrite files set your 4th arg to -y or -n
 
 # if your scripts aren't in your $PATH, but are installed, you can specify locations here
-export reqs=("opusenc")
+export reqs=("opusenc" "parallel")
 
 
 # don't touch anything below this line ----------------------------
@@ -87,7 +87,7 @@ function main {
     fi
 
     tests;
-    find "$source" -name "*.flac" -exec bash -c 'convert_opus "$1" "$bitrate" "$destination"' _ {} \; # do transcodes
+    find "$source" -type f -name '*.flac' | parallel -q bash -c 'convert_opus "$@"' _ {} "$bitrate" "$destination" # do transcodes
     find "$source" -type f \( -iname \*.jpg -o -iname \*.png  -o -iname \*.jpeg \) -exec bash -c 'copy_album_art "$1" "$destination"' _ {} \; # copy album art
 }
 
